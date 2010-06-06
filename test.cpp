@@ -3,12 +3,19 @@
 
 int main(){
   Py_Initialize();
-  
-  PyVariable a;
+
+  PyVariable a,b;
   a = "Hello";
-  PyVariable b = PyVariable::new_str(" you!");
+  b = " World!";
   b = a+b;
-  b = a[0];
+  printf("%s\n",b.c_str());
+
+  b = a[1];
+  b = b("upper");
+  printf("%s\n",b.c_str());
+
+  b = PyVariable::new_dict();
+  b.dict.set("allo","ZOMG!");
   printf("%s\n",b.c_str());
   return 1;
 }
