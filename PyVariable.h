@@ -30,7 +30,7 @@ public:
     // Check wether m_obj is null
     bool isEmpty();
     // For dict's, set a key to a value
-    void set(PyVariable key,PyVariable value);
+    void setitem(PyVariable key,PyVariable value);
     // Get attribute (one can also use o[attr] if type(o)!=dict)
     PyVariable getattr(std::string attr);
 

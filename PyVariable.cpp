@@ -44,7 +44,7 @@ bool PyVariable::isEmpty() {
     return m_obj == NULL;
 }
 
-void PyVariable::set(PyVariable k,PyVariable val) {
+void PyVariable::setitem(PyVariable k,PyVariable val) {
   if (PyDict_Check(m_obj)){
     PyDict_SetItem(m_obj,k.get(),val.get());
   } else{
