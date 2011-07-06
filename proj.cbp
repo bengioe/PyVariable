@@ -24,6 +24,8 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="PyDictionnary.cpp" />
+		<Unit filename="PyDictionnary.h" />
 		<Unit filename="PyException.h" />
 		<Unit filename="PyVariable.cpp" />
 		<Unit filename="PyVariable.h" />

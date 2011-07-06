@@ -1,19 +1,24 @@
+#ifndef PYEXCEPTION_H_
+#define PYEXCEPTION_H_
+
 #include <exception>
 #include <string>
+
+#include "PyDictionnary.h"
+#include "PyVariable.h"
 using namespace std;
 
 class PyException : public exception
 {
  public:
-  PyException(std::string type,std::string message){
-    m_type = type;
-    m_mess = message;
-  }
+  PyException(std::string type,std::string message);
   ~PyException() throw(){};
   virtual const char* what() const throw(){
-    return ("PyVariableError:\n\t"+m_type+": "+m_mess).c_str();
+    return ((std::string)("PyVariableError:\n\t"+m_type+", "+m_mess)).c_str();
   }
  private:
   string m_type;
   string m_mess;
 };
+
+#endif

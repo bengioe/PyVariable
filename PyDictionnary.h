@@ -1,6 +1,7 @@
 #ifndef PYDICT_H
 #define PYDICT_H
-#include <Python.h>
+
+#include <python2.6/Python.h>
 class PyDictionnary;
 class PyVariable;
 

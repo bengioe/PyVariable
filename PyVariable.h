@@ -1,10 +1,10 @@
 #ifndef PYVAR_H
 #define PYVAR_H
-#include <Python.h>
+#include <python2.6/Python.h>
 #include <string>
 class PyVariable;
 #include "PyDictionnary.h"
-
+#include "PyException.h"
 
 class PyVariable
 {
@@ -15,7 +15,7 @@ public:
 
     PyVariable();
     PyVariable(PyObject* obj);
-    // C++ types
+    // build from C++ types
     PyVariable(const char* s);
     PyVariable(std::string s);
     PyVariable(long i);
@@ -29,19 +29,18 @@ public:
     // Check wether m_obj is null
     bool isEmpty();
 
-    //Creation static methods
-    static PyVariable new_dict();
-    static PyVariable new_int();
-    static PyVariable new_str();
-
 
     //str(o)
     char*        c_str(); // C char*
+    operator char*       () {return this->c_str();}
     std::string  str();   // C++ string
+    operator std::string () {return this->str();}
+
 
 
     //C/C++ values
-	int c_int();
+    int c_int();
+    operator int () {return this->c_int();}
 
 
     // math!
@@ -64,5 +63,23 @@ public:
 
     //o.attr
     PyVariable operator()(std::string attr);
+
+    //o()
+    PyVariable call();
+    //o(args)
+    PyVariable call(PyVariable args);
+
+    //Creation static methods
+    static PyVariable new_dict();
+    static PyVariable new_int();
+    static PyVariable new_str();
+    static PyVariable new_tuple();
+    
+    //static class methods
+    static PyVariable import(std::string module_name);
+    static PyVariable reload(PyVariable module);
+    // "exec" runs PyRun_String, so you can use it as both an
+    // "eval" method and an "exec" method to print various stuff
+    static PyVariable exec(std::string str);
 };
 #endif

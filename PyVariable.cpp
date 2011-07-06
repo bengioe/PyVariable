@@ -2,216 +2,232 @@
 #include "PyException.h"
 #include "PyDictionnary.h"
 
-PyVariable::PyVariable()
-{
+PyVariable::PyVariable() {
     m_obj = NULL;
 }
-PyVariable::PyVariable(PyObject* obj)
-{
+
+PyVariable::PyVariable(PyObject* obj) {
     m_obj = obj;
     dict = PyDictionnary(obj);
 }
-PyVariable::PyVariable(const char* s)
-{
-	m_obj = PyString_FromString(s);
-}
-PyVariable::PyVariable(std::string s)
-{
-	m_obj = PyString_FromString(s.c_str());
-}
-PyVariable::PyVariable(long i){
-	m_obj = PyInt_FromLong(i);
-}
-PyVariable::PyVariable(double d){
-	m_obj = PyFloat_FromDouble(d);
+
+PyVariable::PyVariable(const char* s) {
+    m_obj = PyString_FromString(s);
 }
 
+PyVariable::PyVariable(std::string s) {
+    m_obj = PyString_FromString(s.c_str());
+}
 
-PyVariable::~PyVariable()
-{
+PyVariable::PyVariable(long i) {
+    m_obj = PyInt_FromLong(i);
+}
+
+PyVariable::PyVariable(double d) {
+    m_obj = PyFloat_FromDouble(d);
+}
+
+PyVariable::~PyVariable() {
     //Py_XDECREF(m_obj);
 }
 
-PyObject* PyVariable::get()
-{
-    if (m_obj==NULL)
-    {
-        throw PyException("PyVariable::get","the PyVariable is empty");
+PyObject* PyVariable::get() {
+    if (m_obj == NULL) {
+        throw PyException("PyVariable::get", "the PyVariable is empty");
     }
     return m_obj;
 }
-bool PyVariable::isEmpty()
-{
-    return m_obj==NULL;
+
+bool PyVariable::isEmpty() {
+    return m_obj == NULL;
 }
 
 
-PyVariable PyVariable::new_dict()
-{
-    return PyVariable(PyDict_New());
-}
-PyVariable PyVariable::new_int()
-{
-    return PyVariable(PyInt_FromLong(0));
-}
-PyVariable PyVariable::new_str()
-{
-    return PyVariable(PyString_FromString(""));
-}
-
-char* PyVariable::c_str()
-{
-    if (m_obj!=NULL){
-		PyObject* s = PyObject_Str(m_obj);
-		char* ret = PyString_AsString(s);
-		Py_DECREF(s);
-		return ret;
-    }
-    else{
-    	return "Null";
+/**
+ * @return the string value of this PyVariable using PyObject_Str
+ */
+char* PyVariable::c_str() {
+    if (m_obj != NULL) {
+        PyObject* s = PyObject_Str(m_obj);
+        char* ret = PyString_AsString(s);
+        Py_DECREF(s);
+        return ret; // free ret?? probably. damn those c strings are dangerous...
+    } else {
+        return "(null)";
     }
 }
 
-std::string PyVariable::str()
-{
+/**
+ * @return the string value of this PyVariable using PyObject_Str
+ */
+std::string PyVariable::str() {
     std::string ret(this->c_str());
     return ret;
 }
 
-int PyVariable::c_int()
-{
+int PyVariable::c_int() {
     return PyInt_AsLong(m_obj);
 }
 
-
-PyVariable PyVariable::operator+(PyVariable other)
-{
+PyVariable PyVariable::operator+(PyVariable other) {
     PyObject* o = other.get();
-    PyObject* result = PyNumber_Add(m_obj,o);
-    return PyVariable(result);
-}
-PyVariable PyVariable::operator-(PyVariable other)
-{
-    PyObject* o = other.get();
-    PyObject* result = PyNumber_Subtract(m_obj,o);
-    return PyVariable(result);
-}
-PyVariable PyVariable::operator/(PyVariable other)
-{
-    PyObject* o = other.get();
-    PyObject* result = PyNumber_Divide(m_obj,o);
-    return PyVariable(result);
-}
-PyVariable PyVariable::operator*(PyVariable other)
-{
-    PyObject* o = other.get();
-    PyObject* result = PyNumber_Multiply(m_obj,o);
+    PyObject* result = PyNumber_Add(m_obj, o);
     return PyVariable(result);
 }
 
+PyVariable PyVariable::operator-(PyVariable other) {
+    PyObject* o = other.get();
+    PyObject* result = PyNumber_Subtract(m_obj, o);
+    return PyVariable(result);
+}
 
-void PyVariable::operator=(PyVariable other)
-{
+PyVariable PyVariable::operator/(PyVariable other) {
+    PyObject* o = other.get();
+    PyObject* result = PyNumber_Divide(m_obj, o);
+    return PyVariable(result);
+}
+
+PyVariable PyVariable::operator*(PyVariable other) {
+    PyObject* o = other.get();
+    PyObject* result = PyNumber_Multiply(m_obj, o);
+    return PyVariable(result);
+}
+
+void PyVariable::operator=(PyVariable other) {
     Py_XDECREF(m_obj);
     m_obj = other.get();
+    Py_XINCREF(m_obj);
     dict = other.dict;
 }
-void PyVariable::operator=(long other)
-{
+
+void PyVariable::operator=(long other) {
     Py_XDECREF(m_obj);
     m_obj = PyInt_FromLong(other);
 }
-void PyVariable::operator=(const char* other)
-{
+
+void PyVariable::operator=(const char* other) {
     Py_XDECREF(m_obj);
     m_obj = PyString_FromString(other);
 }
 
-
-PyVariable PyVariable::operator[](int index)
-{
+PyVariable PyVariable::operator[](int index) {
     PyObject* pyindex = PyInt_FromLong(index);
     PyVariable ret_value;
-    if (PySequence_Check(m_obj))
-    {
-    	if (PySequence_Length(m_obj)>index){
-			ret_value = PyVariable(PySequence_GetItem(m_obj,index));
-    	}
-    	else{
-    		throw PyException("PyVariable::operator[]","Index out of range");
-    	}
-    }
-    else if ( PyDict_Check(m_obj))
-    {
-        if ( PyDict_Contains(m_obj,pyindex))
-        {
-            ret_value = PyVariable(PyDict_GetItem(m_obj,pyindex));
+    if (PySequence_Check(m_obj)) {
+        if (PySequence_Length(m_obj) > index) {
+            ret_value = PyVariable(PySequence_GetItem(m_obj, index));
+        } else {
+            throw PyException("PyVariable::operator[]", "Index out of range");
         }
-        else
-        {
-            throw PyException("PyVariable::operator[]","Dict has no such key");
+    } else if (PyDict_Check(m_obj)) {
+        if (PyDict_Contains(m_obj, pyindex)) {
+            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
+        } else {
+            throw PyException("PyVariable::operator[]", "Dict has no such key");
         }
-    }
-    else
-    {
-        throw PyException("PyVariable::operator[]","Not a sequence or a dict");
+    } else {
+        throw PyException("PyVariable::operator[]", "Not a sequence or a dict");
     }
     Py_DECREF(pyindex);
     return ret_value;
 }
-PyVariable PyVariable::operator[](std::string key)
-{
+
+PyVariable PyVariable::operator[](std::string key) {
     PyObject* pyindex = PyString_FromString(key.c_str());
     PyVariable ret_value;
-    if ( PyDict_Check(m_obj))
-    {
-        if ( PyDict_Contains(m_obj,pyindex))
-        {
-            ret_value = PyVariable(PyDict_GetItem(m_obj,pyindex));
+    if (PyDict_Check(m_obj)) {
+        if (PyDict_Contains(m_obj, pyindex)) {
+            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
+        } else {
+            throw PyException("PyVariable::operator[]", "Dict has no such key");
         }
-        else
-        {
-            throw PyException("PyVariable::operator[]","Dict has no such key");
-        }
-    }
-    else
-    {
-        throw PyException("PyVariable::operator[]","Not a dict");
+    } else {
+        throw PyException("PyVariable::operator[]", "Not a dict");
     }
     Py_DECREF(pyindex);
     return ret_value;
 }
 
-PyVariable PyVariable::operator[](PyVariable index)
-{
+PyVariable PyVariable::operator[](PyVariable index) {
     PyObject* pyindex = index.get();
     PyVariable ret_value;
-    if (PySequence_Check(m_obj))
-    {
-        ret_value = PyVariable(PySequence_GetItem(m_obj,index.c_int()));
-    }
-    else if ( PyDict_Check(m_obj))
-    {
-        if ( PyDict_Contains(m_obj,pyindex))
-        {
-            ret_value = PyVariable(PyDict_GetItem(m_obj,pyindex));
+    if (PySequence_Check(m_obj)) {
+        ret_value = PyVariable(PySequence_GetItem(m_obj, index.c_int()));
+    } else if (PyDict_Check(m_obj)) {
+        if (PyDict_Contains(m_obj, pyindex)) {
+            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
+        } else {
+            throw PyException("PyVariable::operator[]", "Dict has no such key");
         }
-        else
-        {
-            throw PyException("PyVariable::operator[]","Dict has no such key");
-        }
-    }
-    else
-    {
-        throw PyException("PyVariable::operator[]","Not a sequence or a dict");
+    } else {
+        throw PyException("PyVariable::operator[]", "Not a sequence or a dict");
     }
     return ret_value;
 }
 
-PyVariable PyVariable::operator()(std::string attr){
-	PyObject* o = PyObject_GetAttrString(m_obj,attr.c_str());
-	if (o==NULL){
-		throw PyException("PyVariable::operator()","No such attribute");
-	}
-	return PyVariable(o);
+PyVariable PyVariable::operator()(std::string attr) {
+    PyObject* o = PyObject_GetAttrString(m_obj, attr.c_str());
+    if (o == NULL) {
+        throw PyException("PyVariable::operator()", "No such attribute");
+    }
+    return PyVariable(o);
+}
+
+PyVariable PyVariable::call(PyVariable args){
+    PyObject* o = PyObject_Call(this->get(),args.get(),NULL);
+    if (o == NULL){
+        throw PyException("PyVariable::call","Error during function call");
+    }
+    return PyVariable(o);
+}
+
+
+
+PyVariable PyVariable::call(){
+    PyObject* o = PyObject_Call(this->get(),PyTuple_New(0),NULL);
+    if (o == NULL){
+        throw PyException("PyVariable::call","Error during function call");
+    }
+    return PyVariable(o);
+}
+
+
+
+/////////////////////
+// static stuff
+
+
+PyVariable PyVariable::new_dict() {
+    return PyVariable(PyDict_New());
+}
+
+PyVariable PyVariable::new_int() {
+    return PyVariable(PyInt_FromLong(0));
+}
+
+PyVariable PyVariable::new_str() {
+    return PyVariable(PyString_FromString(""));
+}
+
+PyVariable PyVariable::new_tuple() {
+    return PyVariable(PyTuple_New(0));
+}
+
+
+PyVariable PyVariable::exec(std::string str) {
+    return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0));
+}
+PyVariable PyVariable::import(std::string module_name){
+    PyObject* o = PyImport_ImportModule(module_name.c_str());
+    if (o==NULL){
+        throw PyException("PyVariable::import","Importing module "+module_name+" failed.");
+    }
+    return PyVariable(o);
+}
+PyVariable PyVariable::reload(PyVariable module){
+    PyObject* o = PyImport_ReloadModule(module.get());
+    if (o==NULL){
+        throw PyException("PyVariable::import","Reloading module failed.");
+    }
+    return PyVariable(o);
 }
