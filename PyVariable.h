@@ -16,6 +16,7 @@ public:
     // build from C++ types
     PyVariable(const char* s);
     PyVariable(std::string s);
+    PyVariable(int i);
     PyVariable(long i);
     PyVariable(double d);
     ~PyVariable();
@@ -66,8 +67,8 @@ public:
 
     //o()
     PyVariable operator()();
-    //o(args)
-    PyVariable operator()(PyVariable args);
+    //o(arg1,[arg2,[arg3]])
+    PyVariable operator()(PyVariable arg1,PyVariable arg2=Py_None, PyVariable arg3=Py_None);
 
     //Creation static methods
     static PyVariable new_dict();

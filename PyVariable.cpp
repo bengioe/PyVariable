@@ -1,6 +1,5 @@
 #include "PyVariable.h"
 #include "PyException.h"
-#include "PyDictionnary.h"
 
 PyVariable::PyVariable() {
     m_obj = NULL;
@@ -16,6 +15,10 @@ PyVariable::PyVariable(const char* s) {
 
 PyVariable::PyVariable(std::string s) {
     m_obj = PyString_FromString(s.c_str());
+}
+
+PyVariable::PyVariable(int i) {
+    m_obj = PyInt_FromLong(i);
 }
 
 PyVariable::PyVariable(long i) {
@@ -184,11 +187,18 @@ void PyVariable::set(PyVariable k,PyVariable val) {
 }
 
 
-PyVariable PyVariable::operator()(PyVariable args){
-    PyObject* o = PyObject_Call(this->get(),args.get(),NULL);
+PyVariable PyVariable::operator()(PyVariable arg1,
+				  PyVariable arg2,
+				  PyVariable arg3){
+    int len = 1;
+    if (arg2.get()!=Py_None){++len;}
+    if (arg3.get()!=Py_None){++len;}
+    PyObject* args = PyTuple_Pack(len,arg1.get(),arg2.get(),arg3.get());
+    PyObject* o = PyObject_Call(this->get(),args,NULL);
     if (o == NULL){
         throw PyException("PyVariable::operator()","Error during function call");
     }
+    Py_XDECREF(args);
     return PyVariable(o);
 }
 
