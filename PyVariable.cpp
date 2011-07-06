@@ -44,6 +44,23 @@ bool PyVariable::isEmpty() {
     return m_obj == NULL;
 }
 
+void PyVariable::set(PyVariable k,PyVariable val) {
+  if (PyDict_Check(m_obj)){
+    PyDict_SetItem(m_obj,k.get(),val.get());
+  } else{
+    throw PyException("PyVariable::set","Object is not a dictionnary");
+  }
+    
+}
+
+PyVariable PyVariable::getattr(std::string attr){
+    PyVariable ret_value;
+    PyObject* o = PyObject_GetAttrString(m_obj, attr.c_str());
+    if (o == NULL) {
+      throw PyException("PyVariable::getattr", "No such attribute "+attr+" in object.");
+    }
+    return PyVariable(o);
+}
 
 /**
  * @return the string value of this PyVariable using PyObject_Str
@@ -142,7 +159,7 @@ PyVariable PyVariable::operator[](std::string key) {
         if (PyDict_Contains(m_obj, pyindex)) {
             ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
         } else {
-            throw PyException("PyVariable::operator[]", "Dict has no such key");
+            throw PyException("PyVariable::operator[]", "Dict has no such key: "+key);
         }
     } else {
           PyObject* o = PyObject_GetAttrString(m_obj, key.c_str());
@@ -175,15 +192,6 @@ PyVariable PyVariable::operator[](PyVariable index) {
         throw PyException("PyVariable::operator[]", "Not a sequence or a dict");
     }
     return ret_value;
-}
-
-void PyVariable::set(PyVariable k,PyVariable val) {
-  if (PyDict_Check(m_obj)){
-    PyDict_SetItem(m_obj,k.get(),val.get());
-  } else{
-    throw PyException("PyVariable::set","Object is not a dictionnary");
-  }
-    
 }
 
 

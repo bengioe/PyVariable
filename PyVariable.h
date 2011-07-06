@@ -21,14 +21,20 @@ public:
     PyVariable(double d);
     ~PyVariable();
 
+    /// PyVariable specific methods
+
     // Once object is manipulated,
     // we can send it back to Python:
     PyObject* get();
 
     // Check wether m_obj is null
     bool isEmpty();
+    // For dict's, set a key to a value
+    void set(PyVariable key,PyVariable value);
+    // Get attribute (one can also use o[attr] if type(o)!=dict)
+    PyVariable getattr(std::string attr);
 
-
+    /// "Common" methods
     //str(o)
     const char*    c_str(); // C char*
     operator const char*() {return this->c_str();}
@@ -63,8 +69,6 @@ public:
     PyVariable operator[](std::string);
     PyVariable operator[](const char*);
     
-    void set(PyVariable key,PyVariable value);
-
     //o()
     PyVariable operator()();
     //o(arg1,[arg2,[arg3]])
