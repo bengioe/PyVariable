@@ -4,7 +4,6 @@
 #include <exception>
 #include <string>
 
-#include "PyDictionnary.h"
 #include "PyVariable.h"
 using namespace std;
 

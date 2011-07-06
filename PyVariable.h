@@ -1,18 +1,16 @@
 #ifndef PYVAR_H
 #define PYVAR_H
-#include <python2.6/Python.h>
+#include <Python.h>
 #include <string>
 class PyVariable;
-#include "PyDictionnary.h"
 #include "PyException.h"
 
 class PyVariable
 {
 private:
     PyObject* m_obj;
+    unsigned int m_flag;
 public:
-    PyDictionnary dict;
-
     PyVariable();
     PyVariable(PyObject* obj);
     // build from C++ types
@@ -31,10 +29,10 @@ public:
 
 
     //str(o)
-    char*        c_str(); // C char*
-    operator char*       () {return this->c_str();}
-    std::string  str();   // C++ string
-    operator std::string () {return this->str();}
+    const char*    c_str(); // C char*
+    operator const char*() {return this->c_str();}
+    std::string      str(); // C++ string
+    operator std::string() {return this->str();}
 
 
 
@@ -58,16 +56,18 @@ public:
     // note that if the object is a dictionnary, and k is not a key
     // of o, an exception is raised. To affect (o[k] = v), use o.dict.set(k,v)
     PyVariable operator[](int index);
-    PyVariable operator[](std::string);
     PyVariable operator[](PyVariable index);
-
-    //o.attr
-    PyVariable operator()(std::string attr);
+    // the following is either o[k] if o is a dict
+    // or o.k if o is not a dict
+    PyVariable operator[](std::string);
+    PyVariable operator[](const char*);
+    
+    void set(PyVariable key,PyVariable value);
 
     //o()
-    PyVariable call();
+    PyVariable operator()();
     //o(args)
-    PyVariable call(PyVariable args);
+    PyVariable operator()(PyVariable args);
 
     //Creation static methods
     static PyVariable new_dict();

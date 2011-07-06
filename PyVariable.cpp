@@ -8,7 +8,6 @@ PyVariable::PyVariable() {
 
 PyVariable::PyVariable(PyObject* obj) {
     m_obj = obj;
-    dict = PyDictionnary(obj);
 }
 
 PyVariable::PyVariable(const char* s) {
@@ -45,13 +44,15 @@ bool PyVariable::isEmpty() {
 
 /**
  * @return the string value of this PyVariable using PyObject_Str
+ * This is not a copy, do not free
  */
-char* PyVariable::c_str() {
+const char* PyVariable::c_str() {
     if (m_obj != NULL) {
         PyObject* s = PyObject_Str(m_obj);
+	// "The pointer refers to the internal buffer of string, not a copy."
         char* ret = PyString_AsString(s);
         Py_DECREF(s);
-        return ret; // free ret?? probably. damn those c strings are dangerous...
+        return ret;
     } else {
         return "(null)";
     }
@@ -97,7 +98,6 @@ void PyVariable::operator=(PyVariable other) {
     Py_XDECREF(m_obj);
     m_obj = other.get();
     Py_XINCREF(m_obj);
-    dict = other.dict;
 }
 
 void PyVariable::operator=(long other) {
@@ -142,10 +142,19 @@ PyVariable PyVariable::operator[](std::string key) {
             throw PyException("PyVariable::operator[]", "Dict has no such key");
         }
     } else {
-        throw PyException("PyVariable::operator[]", "Not a dict");
+          PyObject* o = PyObject_GetAttrString(m_obj, key.c_str());
+	  if (o == NULL) {
+	    throw PyException("PyVariable::operator[]", "Object not a dict, and no such attribute "+key+" in object.");
+	  }
+	  ret_value = PyVariable(o);
     }
     Py_DECREF(pyindex);
     return ret_value;
+}
+
+PyVariable PyVariable::operator[](const char* key){
+  std::string k(key);
+  return (*this)[k];
 }
 
 PyVariable PyVariable::operator[](PyVariable index) {
@@ -165,28 +174,30 @@ PyVariable PyVariable::operator[](PyVariable index) {
     return ret_value;
 }
 
-PyVariable PyVariable::operator()(std::string attr) {
-    PyObject* o = PyObject_GetAttrString(m_obj, attr.c_str());
-    if (o == NULL) {
-        throw PyException("PyVariable::operator()", "No such attribute");
-    }
-    return PyVariable(o);
+void PyVariable::set(PyVariable k,PyVariable val) {
+  if (PyDict_Check(m_obj)){
+    PyDict_SetItem(m_obj,k.get(),val.get());
+  } else{
+    throw PyException("PyVariable::set","Object is not a dictionnary");
+  }
+    
 }
 
-PyVariable PyVariable::call(PyVariable args){
+
+PyVariable PyVariable::operator()(PyVariable args){
     PyObject* o = PyObject_Call(this->get(),args.get(),NULL);
     if (o == NULL){
-        throw PyException("PyVariable::call","Error during function call");
+        throw PyException("PyVariable::operator()","Error during function call");
     }
     return PyVariable(o);
 }
 
 
 
-PyVariable PyVariable::call(){
+PyVariable PyVariable::operator()(){
     PyObject* o = PyObject_Call(this->get(),PyTuple_New(0),NULL);
     if (o == NULL){
-        throw PyException("PyVariable::call","Error during function call");
+        throw PyException("PyVariable::operator()","Error during function call");
     }
     return PyVariable(o);
 }

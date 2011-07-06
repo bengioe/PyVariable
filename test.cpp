@@ -10,12 +10,14 @@ int main(){
   b = a+b;
   printf("%s\n",b.c_str());
 
-  b = a[1];
-  b = b("upper");
+  b = b["upper"]();
   printf("%s\n",b.c_str());
 
   b = PyVariable::new_dict();
-  b.dict.set("allo","ZOMG!");
+  b.set("Yet another"," test");
   printf("%s\n",b.c_str());
+  b = PyVariable::exec("lambda x:x**2");
+  printf("%s\n",b.c_str());
+  //printf("%s\n",(b(
   return 1;
 }
