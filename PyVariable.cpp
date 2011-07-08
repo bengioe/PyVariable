@@ -1,6 +1,13 @@
 #include "PyVariable.h"
 #include "PyException.h"
 
+PyObject* _pyvar_call_void_pv(PyObject* func,PyObject* args,PyObject* kw){
+  PyCFunction meth = PyCFunction_GET_FUNCTION(func);
+  void (*fpFunc)(PyVariable) = (void (*)(PyVariable))meth;
+  fpFunc(args);
+  return Py_None;
+}
+
 PyVariable::PyVariable() {
     m_obj = NULL;
 }
@@ -27,6 +34,31 @@ PyVariable::PyVariable(long i) {
 
 PyVariable::PyVariable(double d) {
     m_obj = PyFloat_FromDouble(d);
+}
+
+PyVariable::PyVariable(PyObject* (*fpFunc)(PyObject*,PyObject*)){
+    //this is bad and will cause a memory leak because there won't be
+    //any track of methd, so it can't be freed...
+    PyMethodDef* methd = new PyMethodDef();
+    methd->ml_name = "pyvar_func";
+    methd->ml_meth = fpFunc;
+    methd->ml_flags= METH_VARARGS;
+    methd->ml_doc  = NULL;
+    PyObject* name = PyString_FromString(methd->ml_name);
+    m_obj = PyCFunction_NewEx(methd,NULL,name);
+    Py_DECREF(name);
+}
+
+PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
+    PyMethodDef* methd = new PyMethodDef();
+    methd->ml_name = "pyvar_func";
+    methd->ml_meth = (PyObject* (*)(PyObject*,PyObject*))fpFunc;
+    methd->ml_flags= METH_VARARGS;
+    methd->ml_doc  = NULL;
+    PyObject* name = PyString_FromString(methd->ml_name);
+    m_obj = PyCFunction_NewEx(methd,NULL,name);
+    Py_DECREF(name);
+    m_obj->ob_type->tp_call = _pyvar_call_void_pv;
 }
 
 PyVariable::~PyVariable() {

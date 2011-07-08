@@ -5,6 +5,19 @@
 class PyVariable;
 #include "PyException.h"
 
+typedef PyVariable (*PyVariableFunction)(PyVariable self,PyVariable args);
+
+PyObject*
+_pyvariable_callpvf(PyObject *self, PyObject *args);
+/*
+PyMethodDef _PVFMethods[] = {
+    {"callfunc", _pyvariable_callpvf, METH_VARARGS,
+     "Call a PyVariableFunction"},
+    {NULL, NULL, 0, NULL}
+    };*/
+
+extern PyObject* _pvf_module;
+
 class PyVariable
 {
 private:
@@ -19,6 +32,8 @@ public:
     PyVariable(int i);
     PyVariable(long i);
     PyVariable(double d);
+    PyVariable(PyObject* (*fpFunc)(PyObject*,PyObject*));
+    PyVariable(void (*fpFunc)(PyVariable));
     ~PyVariable();
 
     /// PyVariable specific methods

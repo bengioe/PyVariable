@@ -1,6 +1,10 @@
 #include "PyVariable.h"
 #include "PyException.h"
 
+
+PyObject* helloFromC(PyObject*,PyObject*);
+void yarrFromC(PyVariable);
+
 int main(){
   /* First step is always to Initialize the Python interpreter itself
    * Then you can start playing with PyVariable
@@ -20,6 +24,7 @@ int main(){
   // using o.getattr(..) directly
   // If a PyVariable is a function, you can call it normally:
   // foo()
+  // here we call b.upper()
   b = b["upper"]();
 
   PyVariable c = 2;
@@ -40,12 +45,12 @@ int main(){
   // b = b["upper"]()
   // b["upper"] isn't just a function object. Somehow Python devs have
   // hacked a brilliant way to attach an object to it's methods, so,
-  // b["upper"] can be called, like a callback, and it will remember that
-  // it is "b" that must be `uppercased`.
+  // b["upper"] can be called, like a callback, and the PyObject* method
+  // will "remember" that it is "b" that is the `self` argument when called.
 
   // You can call functions that take up to 3 arguments
   // normally too. Anything (any "C" type) you can build a PyVariable with
-  // can be used as an argument
+  // can be used as an argument.
   printf("%s\n",foo(12).c_str()); // 144
   foo = PyVariable::exec("lambda x,y:x+y");
   printf("%s\n",foo(28,14).c_str());// 42
@@ -62,8 +67,31 @@ int main(){
   PyVariable hasK = b.getattr("has_key")("Yet another");
   printf("%s\n",hasK.c_str()); // True
 
+  // You can even push the heresy farther and create "Python" functions
+  // from proper C functions.
+  b = helloFromC;
+  b(); // Ahoyhoy!
+  // note that helloFromC is a C function defined as 
+  // PyObject* helloFromC(PyObject *self, PyObject *args)
+  b = yarrFromC;
+  b(142);// Yarr! (142,)
+  // here, yarrFromC is defined as:
+  // void yarrFromC(PyVariable args)
+  // args will always be a tuple containing the arguments
 
   // More to come! such as calling functions with more than 3 arguments ;)
 
   return 1;
+}
+
+PyObject*
+helloFromC(PyObject *self, PyObject *args)
+{
+  printf("Ahoyhoy!\n");
+  return Py_BuildValue("i", 0);
+}
+
+void
+yarrFromC(PyVariable args){
+  printf("Yarr! %s\n",param.c_str());
 }
