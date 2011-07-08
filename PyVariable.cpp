@@ -12,6 +12,11 @@ PyVariable::PyVariable() {
     m_obj = NULL;
 }
 
+PyVariable::PyVariable(const PyVariable& o){
+  m_obj = o.m_obj;
+  Py_XINCREF(m_obj);
+}
+
 PyVariable::PyVariable(PyObject* obj) {
     m_obj = obj;
 }
@@ -58,11 +63,15 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
     PyObject* name = PyString_FromString(methd->ml_name);
     m_obj = PyCFunction_NewEx(methd,NULL,name);
     Py_DECREF(name);
+    // add our own callback
     m_obj->ob_type->tp_call = _pyvar_call_void_pv;
 }
 
 PyVariable::~PyVariable() {
-    //Py_XDECREF(m_obj);
+  //Py_XDECREF(m_obj);
+    for (std::list<void*>::iterator it=m_tofree.begin();it!=m_tofree.end();++it){
+      free(*it);
+    }
 }
 
 PyObject* PyVariable::get() {
@@ -96,15 +105,18 @@ PyVariable PyVariable::getattr(std::string attr){
 
 /**
  * @return the string value of this PyVariable using PyObject_Str
- * This is not a copy, do not free
  */
 const char* PyVariable::c_str() {
     if (m_obj != NULL) {
         PyObject* s = PyObject_Str(m_obj);
 	// "The pointer refers to the internal buffer of string, not a copy."
         char* ret = PyString_AsString(s);
+	size_t len = strlen(ret);
+	char* local = (char*)malloc(len);
+	memcpy(local,ret,len);
         Py_DECREF(s);
-        return ret;
+	m_tofree.push_back((void*)local);
+        return local;
     } else {
         return "(null)";
     }
@@ -114,8 +126,14 @@ const char* PyVariable::c_str() {
  * @return the string value of this PyVariable using PyObject_Str
  */
 std::string PyVariable::str() {
-    std::string ret(this->c_str());
-    return ret;
+  if (m_obj != NULL) {
+        PyObject* s = PyObject_Str(m_obj);
+	std::string local = PyString_AsString(s);
+        Py_DECREF(s);
+        return local;
+    } else {
+        return "(null)";
+    }
 }
 
 int PyVariable::c_int() {

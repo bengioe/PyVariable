@@ -2,30 +2,22 @@
 #define PYVAR_H
 #include <Python.h>
 #include <string>
+#include <list>
 class PyVariable;
 #include "PyException.h"
-
-typedef PyVariable (*PyVariableFunction)(PyVariable self,PyVariable args);
-
-PyObject*
-_pyvariable_callpvf(PyObject *self, PyObject *args);
-/*
-PyMethodDef _PVFMethods[] = {
-    {"callfunc", _pyvariable_callpvf, METH_VARARGS,
-     "Call a PyVariableFunction"},
-    {NULL, NULL, 0, NULL}
-    };*/
-
-extern PyObject* _pvf_module;
 
 class PyVariable
 {
 private:
     PyObject* m_obj;
     unsigned int m_flag;
+    // list of stuff used by our functions that should be freed someday
+    // since they could not be immediatly freed when returned
+    std::list<void*> m_tofree;
 public:
     PyVariable();
     PyVariable(PyObject* obj);
+    PyVariable(const PyVariable& o);
     // build from C++ types
     PyVariable(const char* s);
     PyVariable(std::string s);
