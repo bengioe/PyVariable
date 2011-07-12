@@ -9,6 +9,36 @@ PyObject* _pyvar_call_void_pv(PyObject* func,PyObject* args,PyObject* kw){
   return Py_None;
 }
 
+void _pyvar_dealloc_func(PyObject* fp){
+  // nothing to free for us
+}
+
+static PyTypeObject _pyvar_functype_void_pv = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "_pyvar_functype_void_pv", /*tp_name*/
+    sizeof(PyObject),          /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    _pyvar_dealloc_func,       /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    _pyvar_call_void_pv,       /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    "PyVariable function (void (*)(PyV&))",/* tp_doc */
+};
+
+
 PyVariable::PyVariable() {
     m_obj = NULL;
 }
@@ -64,14 +94,16 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
     PyObject* name = PyString_FromString(methd->ml_name);
     m_obj = PyCFunction_NewEx(methd,NULL,name);
     Py_DECREF(name);
-    // add our own callback
-    m_obj->ob_type->tp_call = _pyvar_call_void_pv;
+    // give our own function object type
+    m_obj->ob_type = &_pyvar_functype_void_pv;
 }
 
 PyVariable::~PyVariable() {
-  //Py_XDECREF(m_obj);
+  if (m_obj != NULL){
+    Py_DECREF(m_obj);
+  }
     for (std::list<void*>::iterator it=m_tofree.begin();it!=m_tofree.end();++it){
-        printf("free  %p %s\n",*it,*it);
+      //printf("free  %p %s\n",*it,*it);
         free(*it);
     }
 }
@@ -122,7 +154,7 @@ const char* PyVariable::c_str() {
 	memcpy(local,ret,len);
         local[len]=0;
         Py_DECREF(s);
-        printf("alloc %p %d %s\n",local,len,local);
+        //printf("alloc %p %d %s\n",local,len,local);
 	m_tofree.push_back((void*)local);
         return local;
     } else {

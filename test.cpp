@@ -90,7 +90,14 @@ int main(){
   // void yarrFromC(PyVariable args)
   // args will always be a tuple containing the arguments
 
-  // More to come! such as calling functions with more than 3 arguments ;)
+  a = "Foo ";
+  foo = "Bar!";
+  // Remember how we could pass PyVariables as variables to Python?
+  // Well our "wrapper" to the C function yarrFromC can as well be passed
+  // to Python!
+  b = PyVariable::exec("func(a,b)","a,b,func",&a,&foo,&b);
+
+  // More to come! such as directly calling functions with more than 3 arguments ;)
 
   return 1;
 }
