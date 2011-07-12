@@ -57,6 +57,14 @@ int main(){
   printf("foo(12) -> %s\n",foo(12).c_str()); // 144
   foo = PyVariable::exec("lambda x,y:x+y");
   printf("foo(28,14) -> %s\n",foo(28,14).c_str());// 42
+  
+  // You can also pass PyVariables as locals in an evaluation context
+  a = 32;
+  PyVariable inner_z = 68;
+  // Syntax is exec(command, comma separated variable names, PyVariable* ...)
+  b = PyVariable::exec("foo(a,z)","a,z,foo",&a,&inner_z,&foo);
+  printf("foo(32,68) -> %s\n",b.c_str());// 42
+  
 
   // You can creat dict's, and tuples and lists
   b = PyVariable::new_dict();
@@ -96,5 +104,5 @@ helloFromC(PyObject *self, PyObject *args)
 
 void
 yarrFromC(PyVariable args){
-  printf("Yarr! from C with args %s %s\n",args.c_str(),args[0].str().c_str());
+  printf("Yarr! from C with args %s %s\n",args.c_str(),args[0].c_str());
 }

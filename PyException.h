@@ -1,10 +1,10 @@
 #ifndef PYEXCEPTION_H_
 #define PYEXCEPTION_H_
 
+#include "PyVariable.h"
 #include <exception>
 #include <string>
 
-#include "PyVariable.h"
 using namespace std;
 
 class PyException : public exception

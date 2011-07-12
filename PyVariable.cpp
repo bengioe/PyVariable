@@ -4,7 +4,8 @@
 PyObject* _pyvar_call_void_pv(PyObject* func,PyObject* args,PyObject* kw){
   PyCFunction meth = PyCFunction_GET_FUNCTION(func);
   void (*fpFunc)(PyVariable) = (void (*)(PyVariable))meth;
-  fpFunc(args);
+  PyVariable pvargs = args;
+  fpFunc(pvargs);
   return Py_None;
 }
 
@@ -70,7 +71,8 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
 PyVariable::~PyVariable() {
   //Py_XDECREF(m_obj);
     for (std::list<void*>::iterator it=m_tofree.begin();it!=m_tofree.end();++it){
-      free(*it);
+        printf("free  %p %s\n",*it,*it);
+        free(*it);
     }
 }
 
@@ -83,6 +85,10 @@ PyObject* PyVariable::get() {
 
 bool PyVariable::isEmpty() {
     return m_obj == NULL;
+}
+
+bool PyVariable::isNone(){
+    return m_obj == Py_None;
 }
 
 void PyVariable::setitem(PyVariable k,PyVariable val) {
@@ -111,10 +117,12 @@ const char* PyVariable::c_str() {
         PyObject* s = PyObject_Str(m_obj);
 	// "The pointer refers to the internal buffer of string, not a copy."
         char* ret = PyString_AsString(s);
-	size_t len = strlen(ret);
+	size_t len = strlen(ret)+2;
 	char* local = (char*)malloc(len);
 	memcpy(local,ret,len);
+        local[len]=0;
         Py_DECREF(s);
+        printf("alloc %p %d %s\n",local,len,local);
 	m_tofree.push_back((void*)local);
         return local;
     } else {
@@ -296,6 +304,24 @@ PyVariable PyVariable::new_tuple() {
 PyVariable PyVariable::exec(std::string str) {
     return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0));
 }
+
+PyVariable PyVariable::exec(const char* str,const char* format,...) {
+    PyVariable locals = PyVariable::new_dict();
+    PyVariable elems = format;
+    elems = elems["split"](",");
+    int num = elems["__len__"]();
+
+    va_list arguments;
+    va_start ( arguments, num );
+    for ( int x = 0; x < num; x++ ){
+        PyVariable* arg = va_arg ( arguments, PyVariable* );
+        locals.setitem(elems[x],arg->get());
+    }
+    va_end ( arguments );
+    return PyVariable(PyRun_String(str,Py_eval_input,PyEval_GetBuiltins(),locals.get()));
+}
+
+
 PyVariable PyVariable::import(std::string module_name){
     PyObject* o = PyImport_ImportModule(module_name.c_str());
     if (o==NULL){

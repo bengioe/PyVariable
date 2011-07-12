@@ -36,6 +36,8 @@ public:
 
     // Check wether m_obj is null
     bool isEmpty();
+    // Check wether obj is None
+    bool isNone();
     // For dict's, set a key to a value
     void setitem(PyVariable key,PyVariable value);
     // Get attribute (one can also use o[attr] if type(o)!=dict)
@@ -93,5 +95,7 @@ public:
     // "exec" runs PyRun_String, so you can use it as both an
     // "eval" method and an "exec" method to print various stuff
     static PyVariable exec(std::string str);
+
+    static PyVariable exec(const char* str, const char* args, ...);
 };
 #endif
