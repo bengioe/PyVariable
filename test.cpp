@@ -81,11 +81,12 @@ int main(){
   // You can even push the heresy farther and create "Python" functions
   // from proper C functions.
   b = helloFromC;
-  b(); // Ahoyhoy!
+  b(); // Ahoyhoy from C!
   // note that helloFromC is a C function defined as 
   // PyObject* helloFromC(PyObject *self, PyObject *args)
   b = yarrFromC;
-  b(142);// Yarr! (142,)
+  b(142);// Yarr! from C with args (142,)
+  b();   // Yarr! from C with args ()
   // here, yarrFromC is defined as:
   // void yarrFromC(PyVariable args)
   // args will always be a tuple containing the arguments
@@ -111,5 +112,5 @@ helloFromC(PyObject *self, PyObject *args)
 
 void
 yarrFromC(PyVariable args){
-  printf("Yarr! from C with args %s %s\n",args.c_str(),args[0].c_str());
+  printf("Yarr! from C with args %s\n",args.c_str());
 }
