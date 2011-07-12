@@ -17,6 +17,6 @@ Check out [test.cpp](https://github.com/bengioe/PyVariable/blob/master/test.cpp)
 Installing and Stuff
 --------------------
 
-You need the Python 2.x headers, usually installed alongside Python itself. Support for Python 3.x is not really guaranteed since functions in the C API were changed &/| deprecated.
+You need the Python 2.x headers, usually installed alongside Python itself. Support for Python 3.x is really not guaranteed since functions in the C API were changed &/| deprecated.
 
 Other than that you can either add the few files to your running project or try making a shared object with gcc.
