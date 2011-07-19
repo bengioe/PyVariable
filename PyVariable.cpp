@@ -41,35 +41,52 @@ static PyTypeObject _pyvar_functype_void_pv = {
 
 PyVariable::PyVariable() {
     m_obj = NULL;
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(const PyVariable& o){
   m_obj = o.m_obj;
+  m_flag = o.m_flag;
   Py_XINCREF(m_obj);
 }
 
-PyVariable::PyVariable(PyObject* obj) {
+PyVariable::PyVariable(PyObject* obj, bool isBorrowedRef) {
+    /* Borrowed References are when we get a PyObject* we do not "own", that is,
+     * we are not responsible to "free" it, or to decref it.
+     * One can either use a flag or just increase the reference count, and then
+     * automatically decref any PyObject in a PyVariable. The second is what is
+     * done here.
+     */
+    if (isBorrowedRef){
+        Py_XINCREF(obj);
+    }
     m_obj = obj;
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(const char* s) {
     m_obj = PyString_FromString(s);
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(std::string s) {
     m_obj = PyString_FromString(s.c_str());
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(int i) {
     m_obj = PyInt_FromLong(i);
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(long i) {
     m_obj = PyInt_FromLong(i);
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(double d) {
     m_obj = PyFloat_FromDouble(d);
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(PyObject* (*fpFunc)(PyObject*,PyObject*)){
@@ -83,6 +100,7 @@ PyVariable::PyVariable(PyObject* (*fpFunc)(PyObject*,PyObject*)){
     PyObject* name = PyString_FromString(methd->ml_name);
     m_obj = PyCFunction_NewEx(methd,NULL,name);
     Py_DECREF(name);
+    m_flag = 42;
 }
 
 PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
@@ -96,14 +114,27 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
     Py_DECREF(name);
     // give our own function object type
     m_obj->ob_type = &_pyvar_functype_void_pv;
+    m_flag = 42;
 }
 
 PyVariable::~PyVariable() {
-  if (m_obj != NULL){
-    Py_DECREF(m_obj);
-  }
-    for (std::list<void*>::iterator it=m_tofree.begin();it!=m_tofree.end();++it){
-      //printf("free  %p %s\n",*it,*it);
+    if (m_obj != NULL) {
+        if (PyInt_Check(m_obj)) {
+            /* "The current implementation keeps an array of integer objects for all
+             *  integers between -5 and 256, when you create an int in that range
+             * you actually just get back a reference to the existing object.
+             * So it should be possible to change the value of 1.
+             * I suspect the behaviour of Python in this case is undefined."*/
+            int i = c_int();
+            if (i < -5 || i > 256) {
+                Py_DECREF(m_obj);
+            }
+        }else{
+            Py_XDECREF(m_obj);
+        }
+    }
+    for (std::list<void*>::iterator it = m_tofree.begin(); it != m_tofree.end(); ++it) {
+        //printf("freeing stuff from %p %s\n",this,*it);
         free(*it);
     }
 }
@@ -149,13 +180,14 @@ const char* PyVariable::c_str() {
         PyObject* s = PyObject_Str(m_obj);
 	// "The pointer refers to the internal buffer of string, not a copy."
         char* ret = PyString_AsString(s);
-	size_t len = strlen(ret)+2;
-	char* local = (char*)malloc(len);
+	size_t len = strlen(ret);
+	char* local = (char*)malloc(len+1);
 	memcpy(local,ret,len);
         local[len]=0;
         Py_DECREF(s);
         //printf("alloc %p %d %s\n",local,len,local);
 	m_tofree.push_back((void*)local);
+        //printf("tofree %p\n",this);
         return local;
     } else {
         return "(null)";
@@ -168,7 +200,7 @@ const char* PyVariable::c_str() {
 std::string PyVariable::str() {
   if (m_obj != NULL) {
         PyObject* s = PyObject_Str(m_obj);
-	std::string local = PyString_AsString(s);
+	std::string local(PyString_AsString(s),PyString_Size(s));
         Py_DECREF(s);
         return local;
     } else {
@@ -205,8 +237,9 @@ PyVariable PyVariable::operator*(PyVariable other) {
 }
 
 void PyVariable::operator=(PyVariable other) {
-    Py_XDECREF(m_obj);
+    if (m_obj!=NULL){Py_XDECREF(m_obj);}
     m_obj = other.get();
+    m_flag = other.m_flag;
     Py_XINCREF(m_obj);
 }
 
@@ -247,16 +280,19 @@ PyVariable PyVariable::operator[](std::string key) {
     PyVariable ret_value;
     if (PyDict_Check(m_obj)) {
         if (PyDict_Contains(m_obj, pyindex)) {
-            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
+            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex),true);
         } else {
             throw PyException("PyVariable::operator[]", "Dict has no such key: "+key);
         }
     } else {
-          PyObject* o = PyObject_GetAttrString(m_obj, key.c_str());
+          PyObject* o = PyObject_GetAttr(m_obj, pyindex);
 	  if (o == NULL) {
-	    throw PyException("PyVariable::operator[]", "Object not a dict, and no such attribute "+key+" in object.");
+              o = PyObject_GetItem(m_obj,pyindex);
+              if (o == NULL){
+                throw PyException("PyVariable::operator[]", "Object not a dict, and no such attribute "+key+" in object.");
+              }
 	  }
-	  ret_value = PyVariable(o);
+	  ret_value = PyVariable(o,true);
     }
     Py_DECREF(pyindex);
     return ret_value;
@@ -271,10 +307,10 @@ PyVariable PyVariable::operator[](PyVariable index) {
     PyObject* pyindex = index.get();
     PyVariable ret_value;
     if (PySequence_Check(m_obj)) {
-        ret_value = PyVariable(PySequence_GetItem(m_obj, index.c_int()));
+        ret_value = PyVariable(PySequence_GetItem(m_obj, index.c_int()),true);
     } else if (PyDict_Check(m_obj)) {
         if (PyDict_Contains(m_obj, pyindex)) {
-            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex));
+            ret_value = PyVariable(PyDict_GetItem(m_obj, pyindex),true);
         } else {
             throw PyException("PyVariable::operator[]", "Dict has no such key");
         }
@@ -334,7 +370,7 @@ PyVariable PyVariable::new_tuple() {
 
 
 PyVariable PyVariable::exec(std::string str) {
-    return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0));
+    return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0),true);
 }
 
 PyVariable PyVariable::exec(const char* str,const char* format,...) {
@@ -350,7 +386,7 @@ PyVariable PyVariable::exec(const char* str,const char* format,...) {
         locals.setitem(elems[x],arg->get());
     }
     va_end ( arguments );
-    return PyVariable(PyRun_String(str,Py_eval_input,PyEval_GetBuiltins(),locals.get()));
+    return PyVariable(PyRun_String(str,Py_eval_input,PyEval_GetBuiltins(),locals.get()),true);
 }
 
 

@@ -16,7 +16,7 @@ private:
     std::list<void*> m_tofree;
 public:
     PyVariable();
-    PyVariable(PyObject* obj);
+    PyVariable(PyObject* obj,bool isBorrowedRef=false);
     PyVariable(const PyVariable& o);
     // build from C++ types
     PyVariable(const char* s);
