@@ -67,7 +67,7 @@ int main(){
   
 
   // You can creat dict's, and tuples and lists
-  b = PyVariable::new_dict();
+  b = PyVariable::dict();
   // Since we don't want to mess with temporary values and incomplete
   // map keys, to set a dictionnary item, one must use the setitem method
   b.setitem("Yet another","test");
@@ -97,6 +97,23 @@ int main(){
   // Well our "wrapper" to the C function yarrFromC can as well be passed
   // to Python!
   b = PyVariable::exec("func(a,b)","a,b,func",&a,&foo,&b);
+
+  // Enough with functions, creating maps and dictionnaries on the fly is always
+  // fun! The `setitem` method returns a reference to the dictionnary being handled,
+  // therefore allowing chaining pushes.
+  PyVariable d = PyVariable::dict()
+    .setitem("Key 1",42)
+    .setitem("Key 2","Value 2")
+    .setitem("Other key",yarrFromC);
+  printf("%s\n",d.c_str());
+  // {'Key 1': 42, 'Key 2': 'Value 2', 'Other key': <_pyvar_functype_void_pv object at 0x...>}
+
+  // You can also build lists on the fly:
+  PyVariable l = PyVariable::list()
+    .append("Bonzai")
+    .append(9001)
+    .append(a+foo);
+  printf("%s\n",l.c_str()); // ['Bonzai', 9001, 'Foo Bar!']
 
   // More to come! such as directly calling functions with more than 3 arguments ;)
 

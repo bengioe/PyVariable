@@ -38,7 +38,6 @@ static PyTypeObject _pyvar_functype_void_pv = {
     "PyVariable function (void (*)(PyV&))",/* tp_doc */
 };
 
-
 PyVariable::PyVariable() {
     m_obj = NULL;
     m_flag = 42;
@@ -117,6 +116,7 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
     m_flag = 42;
 }
 
+
 PyVariable::~PyVariable() {
     if (m_obj != NULL) {
         if (PyInt_Check(m_obj)) {
@@ -154,13 +154,13 @@ bool PyVariable::isNone(){
     return m_obj == Py_None;
 }
 
-void PyVariable::setitem(PyVariable k,PyVariable val) {
+PyVariable PyVariable::setitem(PyVariable k,PyVariable val) {
   if (PyDict_Check(m_obj)){
     PyDict_SetItem(m_obj,k.get(),val.get());
   } else{
-    throw PyException("PyVariable::set","Object is not a dictionnary");
+    throw PyException("PyVariable::setitem","Object is not a dictionnary");
   }
-    
+  return *this;
 }
 
 PyVariable PyVariable::getattr(std::string attr){
@@ -210,6 +210,16 @@ std::string PyVariable::str() {
 
 int PyVariable::c_int() {
     return PyInt_AsLong(m_obj);
+}
+
+
+PyVariable PyVariable::append(PyVariable e){
+  if (PyList_Check(m_obj)){
+    PyList_Append(m_obj,e.get());
+  }else{
+    throw PyException("PyVariable::append","Object is not a list. Cannot append.");
+  }
+  return *this;
 }
 
 PyVariable PyVariable::operator+(PyVariable other) {
@@ -352,8 +362,12 @@ PyVariable PyVariable::operator()(){
 // static stuff
 
 
-PyVariable PyVariable::new_dict() {
-    return PyVariable(PyDict_New());
+PyVariable PyVariable::dict() {
+    return PyDict_New();
+}
+
+PyVariable PyVariable::list() {
+    return PyList_New(0);
 }
 
 PyVariable PyVariable::new_int() {
@@ -370,11 +384,11 @@ PyVariable PyVariable::new_tuple() {
 
 
 PyVariable PyVariable::exec(std::string str) {
-    return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0),true);
+    return PyVariable(PyRun_String(str.c_str(),Py_eval_input,PyEval_GetBuiltins(),0));
 }
 
 PyVariable PyVariable::exec(const char* str,const char* format,...) {
-    PyVariable locals = PyVariable::new_dict();
+    PyVariable locals = PyVariable::dict();
     PyVariable elems = format;
     elems = elems["split"](",");
     int num = elems["__len__"]();
@@ -383,10 +397,14 @@ PyVariable PyVariable::exec(const char* str,const char* format,...) {
     va_start ( arguments, num );
     for ( int x = 0; x < num; x++ ){
         PyVariable* arg = va_arg ( arguments, PyVariable* );
+	// increase ref because PyDict_SetItem doesn't, so when
+	// `locals` is freed, it decrefs it's arguments because they are supposed
+	// to be borrowed references
+	Py_XINCREF(arg->get());
         locals.setitem(elems[x],arg->get());
     }
     va_end ( arguments );
-    return PyVariable(PyRun_String(str,Py_eval_input,PyEval_GetBuiltins(),locals.get()),true);
+    return PyVariable(PyRun_String(str,Py_eval_input,PyEval_GetBuiltins(),locals.get()));
 }
 
 

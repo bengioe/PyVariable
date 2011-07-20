@@ -39,7 +39,7 @@ public:
     // Check wether obj is None
     bool isNone();
     // For dict's, set a key to a value
-    void setitem(PyVariable key,PyVariable value);
+    PyVariable setitem(PyVariable key,PyVariable value);
     // Get attribute (one can also use o[attr] if type(o)!=dict)
     PyVariable getattr(std::string attr);
 
@@ -50,7 +50,8 @@ public:
     std::string      str(); // C++ string
     operator std::string() {return this->str();}
 
-
+    //o.append
+    PyVariable append(PyVariable e);
 
     //C/C++ values
     int c_int();
@@ -84,7 +85,8 @@ public:
     PyVariable operator()(PyVariable arg1,PyVariable arg2=Py_None, PyVariable arg3=Py_None);
 
     //Creation static methods
-    static PyVariable new_dict();
+    static PyVariable dict();
+    static PyVariable list();
     static PyVariable new_int();
     static PyVariable new_str();
     static PyVariable new_tuple();
@@ -98,4 +100,31 @@ public:
 
     static PyVariable exec(const char* str, const char* args, ...);
 };
+
+/*
+
+
+
+class _pyvar_dict_bit{
+ public:
+  _pyvar_dict_bit(){
+    d = PyDict_New();
+  }
+  _pyvar_dict_bit push(PyVariable k,PyVariable v){
+    PyDict_SetItem(d,k.get(),v.get());
+    return *this;
+  }
+  PyObject* pop(){
+    return d;
+  }
+  private:
+    PyObject* d;
+  };
+
+PyVariable PyVariable::operator=(_pyvar_dict_bit db);
+static _pyvar_dict_bit PyVariable::dict();
+
+*/
 #endif
+
+
