@@ -2,8 +2,9 @@
 #include "PyException.h"
 
 
-PyObject* helloFromC(PyObject*,PyObject*);
-void yarrFromC(PyVariable);
+PyObject*  helloFromC(PyObject*,PyObject*);
+void       yarrFromC(PyVariable);
+PyVariable fastSum(PyVariable);
 
 int main(){
   /* First step is always to Initialize the Python interpreter itself
@@ -82,6 +83,7 @@ int main(){
   // from proper C functions.
   b = helloFromC;
   b(); // Ahoyhoy from C!
+  b("Some",-32,"Arguments");
   // note that helloFromC is a C function defined as 
   // PyObject* helloFromC(PyObject *self, PyObject *args)
   b = yarrFromC;
@@ -112,8 +114,14 @@ int main(){
   PyVariable l = PyVariable::list()
     .append("Bonzai")
     .append(9001)
-    .append(a+foo);
-  printf("%s\n",l.c_str()); // ['Bonzai', 9001, 'Foo Bar!']
+    .append(a+foo, 2);
+  printf("%s\n",l.c_str()); // ['Bonzai', 9001, 'Foo Bar!', 'Foo Bar!']
+
+
+  // All in all, these are the function types you can pass to Python:
+  // `PyObject* (*)(PyObject* self,PyObject* args)`
+  // `void (*)(PyVariable args)`
+  // `PyVariable (*)(PyVariable args)`
 
   // More to come! such as directly calling functions with more than 3 arguments ;)
 
@@ -123,11 +131,25 @@ int main(){
 PyObject*
 helloFromC(PyObject *self, PyObject *args)
 {
-  printf("Ahoyhoy from C!\n");
+  printf("Ahoyhoy from C! %s\n",PyVariable(args).c_str());
   return Py_BuildValue("i", 0);
 }
 
 void
 yarrFromC(PyVariable args){
   printf("Yarr! from C with args %s\n",args.c_str());
+}
+
+PyVariable
+fastSum(PyVariable args){
+  args = args[0];
+  if (PySequence_Check(args.get())){
+    int sum = 0;
+    int len = args["__len__"]();
+    for (int i=0;i<len;++i){
+      sum+=args[i].c_int();
+    }
+    return sum;
+  }
+  return 0;
 }

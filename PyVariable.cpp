@@ -9,6 +9,14 @@ PyObject* _pyvar_call_void_pv(PyObject* func,PyObject* args,PyObject* kw){
   return Py_None;
 }
 
+PyObject* _pyvar_call_pv_pv(PyObject* func,PyObject* args,PyObject* kw){
+  PyCFunction meth = PyCFunction_GET_FUNCTION(func);
+  PyVariable (*fpFunc)(PyVariable) = (PyVariable (*)(PyVariable))meth;
+  PyVariable pvargs = args;
+  PyVariable result = fpFunc(pvargs);
+  return result.get();
+}
+
 void _pyvar_dealloc_func(PyObject* fp){
   // nothing to free for us
 }
@@ -16,27 +24,38 @@ void _pyvar_dealloc_func(PyObject* fp){
 static PyTypeObject _pyvar_functype_void_pv = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "_pyvar_functype_void_pv", /*tp_name*/
+    "Cfunc(void(*)(PyVariable))", /*tp_name*/
     sizeof(PyObject),          /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     _pyvar_dealloc_func,       /*tp_dealloc*/
-    0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
-    0,                         /*tp_setattr*/
-    0,                         /*tp_compare*/
-    0,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
-    0,                         /*tp_as_mapping*/
-    0,                         /*tp_hash */
+    /*tp_print,tp_getattr,tp_setattr,tp_compare,tp_repr,
+      tp_as_number,tp_as_sequence,tp_as_mapping,tp_hash*/
+    0,0,0,0,0,0,0,0,0,
     _pyvar_call_void_pv,       /*tp_call*/
-    0,                         /*tp_str*/
-    0,                         /*tp_getattro*/
-    0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
+    /*tp_str,tp_getattro,tp_setattro,tp_as_buffer*/
+    0,0,0,0,
     Py_TPFLAGS_DEFAULT,        /*tp_flags*/
     "PyVariable function (void (*)(PyV&))",/* tp_doc */
 };
+
+static PyTypeObject _pyvar_functype_pv_pv = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "Cfunc(PyVariable(*)(PyVariable))", /*tp_name*/
+    sizeof(PyObject),          /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    _pyvar_dealloc_func,       /*tp_dealloc*/
+    /*tp_print,tp_getattr,tp_setattr,tp_compare,tp_repr,
+      tp_as_number,tp_as_sequence,tp_as_mapping,tp_hash*/
+    0,0,0,0,0,0,0,0,0,
+    _pyvar_call_pv_pv,         /*tp_call*/
+    /*tp_str,tp_getattro,tp_setattro,tp_as_buffer*/
+    0,0,0,0,
+    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    "PyVariable function (PyV (*)(PyV))",/* tp_doc */
+};
+
+
 
 PyVariable::PyVariable() {
     m_obj = NULL;
@@ -113,6 +132,20 @@ PyVariable::PyVariable(void (*fpFunc)(PyVariable)){
     Py_DECREF(name);
     // give our own function object type
     m_obj->ob_type = &_pyvar_functype_void_pv;
+    m_flag = 42;
+}
+
+PyVariable::PyVariable(PyVariable (*fpFunc)(PyVariable)){
+    PyMethodDef* methd = new PyMethodDef();
+    methd->ml_name = "pyvar_func";
+    methd->ml_meth = (PyObject* (*)(PyObject*,PyObject*))fpFunc;
+    methd->ml_flags= METH_VARARGS;
+    methd->ml_doc  = NULL;
+    PyObject* name = PyString_FromString(methd->ml_name);
+    m_obj = PyCFunction_NewEx(methd,NULL,name);
+    Py_DECREF(name);
+    // give our own function object type
+    m_obj->ob_type = &_pyvar_functype_pv_pv;
     m_flag = 42;
 }
 
@@ -213,9 +246,11 @@ int PyVariable::c_int() {
 }
 
 
-PyVariable PyVariable::append(PyVariable e){
+PyVariable PyVariable::append(PyVariable e, int nrepeat){
   if (PyList_Check(m_obj)){
-    PyList_Append(m_obj,e.get());
+    for (int i=0;i<nrepeat;i++){
+      PyList_Append(m_obj,e.get());
+    }
   }else{
     throw PyException("PyVariable::append","Object is not a list. Cannot append.");
   }

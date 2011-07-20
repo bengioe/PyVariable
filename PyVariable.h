@@ -26,6 +26,7 @@ public:
     PyVariable(double d);
     PyVariable(PyObject* (*fpFunc)(PyObject*,PyObject*));
     PyVariable(void (*fpFunc)(PyVariable));
+    PyVariable(PyVariable (*fpFunc)(PyVariable));
     ~PyVariable();
 
     /// PyVariable specific methods
@@ -51,7 +52,7 @@ public:
     operator std::string() {return this->str();}
 
     //o.append
-    PyVariable append(PyVariable e);
+    PyVariable append(PyVariable e, int nrepeat=1);
 
     //C/C++ values
     int c_int();
